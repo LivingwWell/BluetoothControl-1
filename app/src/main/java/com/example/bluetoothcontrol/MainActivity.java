@@ -39,11 +39,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private InputStream inputStream;
     private OutputStream OutputStream;
     private static String TAG = "MainActivity";
-    private String mDeviceAddress="00:15:A6:00:4D:E6";
+    private String mDeviceAddress = "00:15:A6:00:4D:E6";
     public static UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
     private EditText etInput;
     private static final boolean D = true;
     private int mState;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -81,11 +82,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     //未配对设备
                     Toast.makeText(MainActivity.this, "未配对设备", Toast.LENGTH_SHORT).show();
                 } else {
-                    //已经配对过的设备
-                    TextView tvPaired = findViewById(R.id.tvPaired);
-                    tvPaired.setVisibility(View.VISIBLE);
-                    tvPaired.setText(device.getName() + "\n" + device.getAddress());
-                    mDeviceAddress = device.getAddress();
+                    //显示已经配对过的设备
+                    //     TextView tvPaired = findViewById(R.id.tvPaired);
+                    //     tvPaired.setVisibility(View.VISIBLE);
+                    //     tvPaired.setText(device.getName() + "\n" + device.getAddress());
+                    //     mDeviceAddress = device.getAddress();
                     Toast.makeText(MainActivity.this, device.getName() + "\n" + device.getAddress(), Toast.LENGTH_SHORT).show();
                 }
                 Log.i(TAG, "NAME:" + device.getName() + "ADDRESS:" + device.getAddress());
@@ -115,20 +116,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Toast.makeText(MainActivity.this, "蓝牙没打开", Toast.LENGTH_SHORT).show();
         }
         ConnectThread();
-     //   sendData(etInput.getText().toString().getBytes());
+        //   sendData(etInput.getText().toString().getBytes());
     }
 
     public void ConnectThread() {
-        BluetoothDevice device=bluetoothAdapter.getRemoteDevice(mDeviceAddress);
+        BluetoothDevice device = bluetoothAdapter.getRemoteDevice(mDeviceAddress);
         try {
-           BluetoothSocket bluetoothSocket = device.createRfcommSocketToServiceRecord(MY_UUID);
+            BluetoothSocket bluetoothSocket = device.createRfcommSocketToServiceRecord(MY_UUID);
             Log.d(TAG, "开始连接...");
-            if (bluetoothSocket!=null){
+            if (bluetoothSocket != null) {
                 bluetoothSocket.connect();
-                try{
-                    OutputStream outputStream=bluetoothSocket.getOutputStream();
+                try {
+                    OutputStream outputStream = bluetoothSocket.getOutputStream();
                     outputStream.write(etInput.getText().toString().getBytes());
-                }catch (IOException e){
+                } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
@@ -137,13 +138,5 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    private void sendData(byte[] cmd){
-        try{
-         OutputStream outputStream=bluetoothSocket.getOutputStream();
-            outputStream.write(cmd);
-        }catch (IOException e){
-            e.printStackTrace();
-        }
-    }
 
 }
