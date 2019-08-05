@@ -1,0 +1,210 @@
+package com.example.bluetoothcontrol;
+
+import android.Manifest;
+import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.hjq.permissions.OnPermission;
+import com.hjq.permissions.XXPermissions;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+public class BluetoothActivity extends AppCompatActivity implements View.OnClickListener {
+    private Button button;
+    private BluetoothAdapter bluetoothAdapter;
+    private BluetoothDevice device;
+    private static String TAG = "MainActivity";
+    private String mDeviceAddress = "00:15:A6:00:4D:C5";
+    public static UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+    private EditText etInput;
+    private static final boolean D = true;
+    private int mState;
+    private ArrayList<String> List;
+    private ArrayAdapter<String> mPairedDevices;
+    private ArrayAdapter<String> mNewDevices;
+    public static String DEVICE_ADDRESS = "device address";
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        button = findViewById(R.id.button);
+        etInput = findViewById(R.id.editText);
+        button.setOnClickListener(this);
+        //etInput.getText().toString();
+        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        notifyDataSetChanged();
+
+
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(BluetoothDevice.ACTION_FOUND);
+        intentFilter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+        this.registerReceiver(receiver, intentFilter);
+        requestPermission();
+
+
+
+    }
+
+    private void notifyDataSetChanged() {
+    }
+
+    private AdapterView.OnItemClickListener mDeviceClickListener = new AdapterView.OnItemClickListener()
+    {
+        public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3)
+        {
+            // 关闭蓝牙搜索以便进行蓝牙连接
+            bluetoothAdapter.cancelDiscovery();
+
+            // 列表项名称的最后17个字符为MAC地址
+            String str = ((TextView) v).getText().toString();
+            String address = str.substring(str.length() - 17);
+
+            // 将MAC地址通过意图返回UI
+            Intent intent = new Intent();
+            intent.putExtra(DEVICE_ADDRESS, address);
+
+            setResult(Activity.RESULT_OK, intent);
+            finish();
+        }
+    };
+
+    public void requestPermission() {
+        String[] PermissionGroup={
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.BLUETOOTH_ADMIN,
+                Manifest.permission.BLUETOOTH };
+
+
+        XXPermissions.with(this)
+                // .constantRequest() //可设置被拒绝后继续申请，直到用户授权或者永久拒绝...闪退
+                // .permission(Permission.SYSTEM_ALERT_WINDOW, Permission.REQUEST_INSTALL_PACKAGES) //支持请求6.0悬浮窗权限8.0请求安装权限
+                .permission( PermissionGroup ) //不指定权限则自动获取清单中的危险权限
+                .request(new OnPermission() {
+                    @Override
+                    public void hasPermission(List<String> granted, boolean isAll) {
+                    }
+
+                    @Override
+                    public void noPermission(List<String> denied, boolean quick) {
+                    }
+                });}
+
+
+
+
+    private final BroadcastReceiver receiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String actino = intent.getAction();
+            //当发现找到设备时
+            if (BluetoothDevice.ACTION_FOUND.equals(actino)) {
+                //从Intent获取BluetoothDevice对象
+                device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                //如果它已经配对，请跳过它，因为它已经被列出了
+                if (device.getBondState() != BluetoothDevice.BOND_BONDED) {
+                    //未配对设备
+                    Toast.makeText(BluetoothActivity.this, "未配对设备2", Toast.LENGTH_SHORT).show();
+                } else {
+                    // 显示已经配对过的设备
+                    //TextView tvPaired = findViewById(R.id.tvPaired);
+                    //tvPaired.setVisibility(View.VISIBLE);
+                    //tvPaired.setText(device.getName() + "\n" + device.getAddress());
+                    mDeviceAddress = device.getAddress();
+                    Toast.makeText(BluetoothActivity.this, device.getName() + "\n" + device.getAddress(), Toast.LENGTH_SHORT).show();
+                }
+                Log.i(TAG, "NAME:" + device.getName() + "ADDRESS:" + device.getAddress());
+            } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(actino)) {
+                Log.i(TAG, "search finish!");
+                Toast.makeText(BluetoothActivity.this, "search finish22!", Toast.LENGTH_SHORT).show();
+            }
+        }
+    };
+
+
+    @Override
+    public void onClick(View view) {
+        if (bluetoothAdapter.isEnabled()) {
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            Toast.makeText(BluetoothActivity.this, "蓝牙已打开", Toast.LENGTH_SHORT).show();
+            //如果我们已经发现了，请停止它
+            if (bluetoothAdapter.isDiscovering()) {
+                bluetoothAdapter.cancelDiscovery();
+            }
+            //搜索蓝牙
+            bluetoothAdapter.startDiscovery();
+            // write(etInput.getText().toString().getBytes());
+        } else {
+            //Log.e(TAG, "蓝牙没打开");
+            Toast.makeText(BluetoothActivity.this, "蓝牙没打开", Toast.LENGTH_SHORT).show();
+        }
+
+        ConnectThread();
+        sendMessage();
+
+    }
+        //   sendData(etInput.getText().toString().getBytes());
+
+        private void sendMessage() {
+
+            //Intent intent=new Intent(BluetoothActivity.this,receiverActivity.class);
+            // startActivities(new Intent[]{intent});
+
+            Intent intent = new Intent(this,receiverActivity.class);
+            //声明一个编辑框和布局文件中id为edit_message的编辑框链接起来。
+            //
+            EditText editText = findViewById(R.id.editText);
+            //把编辑框获取的文本赋值给String类型的message
+            String message = editText.getText().toString().trim();
+            //intent.setClassName(Main22Activity.this,message);
+            //给message起一个名字，并传给另一个activity
+            intent.putExtra("EXTRA_MESSAGE",message);
+            //启动意图
+            startActivity(intent);
+
+
+        }
+
+
+    public void ConnectThread() {
+        BluetoothDevice device = bluetoothAdapter.getRemoteDevice(mDeviceAddress);
+        try {
+            BluetoothSocket bluetoothSocket = device.createRfcommSocketToServiceRecord(MY_UUID);
+            Log.d(TAG, "开始连接...");
+            if (bluetoothSocket != null) {
+                bluetoothSocket.connect();
+                try {
+                    OutputStream outputStream = bluetoothSocket.getOutputStream();
+                    outputStream.write(etInput.getText().toString().getBytes());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+}
